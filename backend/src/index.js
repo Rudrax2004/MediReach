@@ -7,6 +7,7 @@ const logger = require("./utils/logger");
 const analyzeRoutes = require("./routes/analyze");
 const doctorsRoutes = require("./routes/doctors");
 const bookingRoutes = require("./routes/booking");
+const voiceRoutes = require("./routes/voice");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -23,6 +24,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api/analyze", analyzeRoutes);
+app.use("/api/voice-transcribe", voiceRoutes);
 app.use("/api/doctors", doctorsRoutes);
 app.use("/api", bookingRoutes);
 
