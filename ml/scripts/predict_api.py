@@ -9,6 +9,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from disease_utils import normalize_disease_map, normalize_disease_name
 from paths import MODELS_DIR
 
 app = Flask(__name__)
@@ -32,7 +33,9 @@ def load_artifacts() -> None:
 
     MODEL = joblib.load(MODELS_DIR / "medireach_model.pkl")
     FEATURE_COLUMNS = joblib.load(MODELS_DIR / "feature_columns.pkl")
-    SEVERITY_MAP = joblib.load(MODELS_DIR / "severity_map.pkl")
+    SEVERITY_MAP = normalize_disease_map(
+        joblib.load(MODELS_DIR / "severity_map.pkl")
+    )
 
 
 def build_feature_vector(symptoms: list, age: int, sex: str) -> np.ndarray:
@@ -87,15 +90,21 @@ def predict():
 
     top_indices = np.argsort(probabilities)[::-1][:3]
     top_3_predictions = [
-        {"disease": str(classes[i]), "probability": round(float(probabilities[i]), 4)}
+        {
+            "disease": normalize_disease_name(classes[i]),
+            "probability": round(float(probabilities[i]), 4),
+        }
         for i in top_indices
     ]
 
     best_idx = top_indices[0]
-    predicted_disease = str(classes[best_idx])
+    predicted_disease = normalize_disease_name(classes[best_idx])
     confidence = round(float(probabilities[best_idx]), 4)
 
-    severity_score = int(SEVERITY_MAP.get(predicted_disease, 3))
+    severity_score = SEVERITY_MAP.get(predicted_disease)
+    if severity_score is None:
+        severity_score = 3
+    severity_score = int(severity_score)
     tier = severity_to_tier(severity_score)
 
     return jsonify(

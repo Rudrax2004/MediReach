@@ -13,6 +13,7 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 from sklearn.model_selection import train_test_split
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from disease_utils import normalize_disease_map
 from paths import DATA_DIR, MODELS_DIR, RANDOM_STATE
 
 
@@ -90,7 +91,9 @@ def main() -> None:
 
     feature_columns = list(X.columns)
     severity_map_path = DATA_DIR / "severity_map.json"
-    severity_map = json.loads(severity_map_path.read_text(encoding="utf-8"))
+    severity_map = normalize_disease_map(
+        json.loads(severity_map_path.read_text(encoding="utf-8"))
+    )
 
     joblib.dump(model, MODELS_DIR / "medireach_model.pkl")
     joblib.dump(feature_columns, MODELS_DIR / "feature_columns.pkl")

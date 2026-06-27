@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from disease_utils import normalize_disease_name
 from paths import DATA_DIR, PATIENTS_FILE, RANDOM_STATE, SAMPLE_SIZE, SYMPTOMS_FILE
 
 
@@ -63,7 +64,9 @@ def main() -> None:
         else:
             print(f"Warning: initial_evidence_id {evidence_id} not in symptom columns")
 
-    y = patients["ground_truth_disease_name"].astype(str).values
+    y = np.array(
+        [normalize_disease_name(name) for name in patients["ground_truth_disease_name"]]
+    )
 
     expected_cols = 112
     if X.shape[1] != expected_cols:

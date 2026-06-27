@@ -7,6 +7,7 @@ from pathlib import Path
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from disease_utils import normalize_disease_series
 from paths import (
     ANTECEDENTS_FILE,
     DATA_DIR,
@@ -23,10 +24,6 @@ def load_csv(path: Path, name: str) -> pd.DataFrame:
     if not path.exists():
         raise FileNotFoundError(f"Missing {name}: {path}")
     return pd.read_csv(path)
-
-
-def normalize_disease_name(series: pd.Series) -> pd.Series:
-    return series.astype(str).str.strip()
 
 
 def get_train_sample(patients: pd.DataFrame) -> pd.DataFrame:
@@ -88,7 +85,7 @@ def main() -> None:
         raise ValueError("diseases.csv must contain a severity column (1=critical, 5=mild)")
 
     diseases_clean = diseases.copy()
-    diseases_clean[disease_name_col] = normalize_disease_name(diseases_clean[disease_name_col])
+    diseases_clean[disease_name_col] = normalize_disease_series(diseases_clean[disease_name_col])
     diseases_clean = diseases_clean.drop_duplicates(subset=[disease_name_col]).reset_index(drop=True)
 
     severity_map = dict(
@@ -96,6 +93,10 @@ def main() -> None:
             diseases_clean[disease_name_col].astype(str),
             diseases_clean[severity_col].astype(int),
         )
+    )
+
+    train_sample["ground_truth_disease_name"] = normalize_disease_series(
+        train_sample["ground_truth_disease_name"]
     )
 
     diseases_clean.to_csv(DATA_DIR / "diseases_clean.csv", index=False)
