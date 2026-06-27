@@ -11,7 +11,7 @@ function formatDisplayTime(datetime) {
   });
 }
 
-export default function BookingConfirmation({ appointment, audioUrl }) {
+export default function BookingConfirmation({ appointment, audioUrl, message }) {
   const hasAudio = Boolean(audioUrl);
 
   return (
@@ -20,6 +20,8 @@ export default function BookingConfirmation({ appointment, audioUrl }) {
         <span className="booking-confirmation__check">✓</span>
         <h2>Appointment Confirmed</h2>
       </div>
+
+      {message && <p className="booking-confirmation__message">{message}</p>}
 
       <dl className="booking-confirmation__details">
         <div>
@@ -30,13 +32,25 @@ export default function BookingConfirmation({ appointment, audioUrl }) {
           <dt>Doctor</dt>
           <dd>
             {appointment.doctorName}
-            <span className="booking-confirmation__specialty">{appointment.specialty}</span>
+            {appointment.specialty && (
+              <span className="booking-confirmation__specialty">{appointment.specialty}</span>
+            )}
           </dd>
         </div>
         <div>
           <dt>When</dt>
           <dd>{formatDisplayTime(appointment.datetime)}</dd>
         </div>
+        {appointment.zoomLink && (
+          <div>
+            <dt>Video call</dt>
+            <dd>
+              <a href={appointment.zoomLink} target="_blank" rel="noreferrer">
+                {appointment.zoomLink}
+              </a>
+            </dd>
+          </div>
+        )}
         <div>
           <dt>Status</dt>
           <dd className="booking-confirmation__status">{appointment.status}</dd>

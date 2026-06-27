@@ -8,21 +8,21 @@ export default function BookAppointment({ defaultPatientName = "", defaultSympto
   const [doctors, setDoctors] = useState([]);
   const [doctorId, setDoctorId] = useState("");
   const [patientName, setPatientName] = useState(defaultPatientName);
-  const [patientEmail, setPatientEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [datetime, setDatetime] = useState("");
-  const [symptoms, setSymptoms] = useState(defaultSymptoms);
+  const [reason, setReason] = useState(defaultSymptoms);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [confirmation, setConfirmation] = useState(null);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/doctors?available=true`)
+    fetch(`${API_BASE}/api/doctors?accepting=true&location=Sudbury`)
       .then((res) => res.json())
       .then((data) => {
         setDoctors(data.doctors || []);
         if (data.doctors?.length) {
           setDoctorId(data.doctors[0].id);
-          const slot = data.doctors[0].nextSlot;
+          const slot = data.doctors[0].next_available || data.doctors[0].nextSlot;
           if (slot) {
             setDatetime(slot.slice(0, 16));
           }
@@ -36,14 +36,15 @@ export default function BookAppointment({ defaultPatientName = "", defaultSympto
   }, [defaultPatientName]);
 
   useEffect(() => {
-    if (defaultSymptoms) setSymptoms(defaultSymptoms);
+    if (defaultSymptoms) setReason(defaultSymptoms);
   }, [defaultSymptoms]);
 
   const handleDoctorChange = (id) => {
     setDoctorId(id);
     const doctor = doctors.find((d) => d.id === id);
-    if (doctor?.nextSlot) {
-      setDatetime(doctor.nextSlot.slice(0, 16));
+    const slot = doctor?.next_available || doctor?.nextSlot;
+    if (slot) {
+      setDatetime(slot.slice(0, 16));
     }
   };
 
@@ -54,15 +55,15 @@ export default function BookAppointment({ defaultPatientName = "", defaultSympto
     setConfirmation(null);
 
     try {
-      const response = await fetch(`${API_BASE}/api/book`, {
+      const response = await fetch(`${API_BASE}/api/book-appointment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          doctorId,
-          patientName,
-          patientEmail,
+          doctor_id: doctorId,
+          patient_name: patientName,
+          phone,
           datetime: new Date(datetime).toISOString(),
-          symptoms: symptoms || null,
+          reason,
         }),
       });
 
@@ -73,9 +74,12 @@ export default function BookAppointment({ defaultPatientName = "", defaultSympto
       }
 
       setConfirmation({
-        appointment: data.appointment,
-        audioUrl: data.audio_url,
-        voiceSource: data.voice_source,
+        confirmationId: data.confirmation_id,
+        doctorName: data.doctor_name,
+        appointmentTime: data.appointment_time,
+        zoomLink: data.zoom_link,
+        message: data.message,
+        patientName,
       });
     } catch (err) {
       setError(err.message);
@@ -87,8 +91,14 @@ export default function BookAppointment({ defaultPatientName = "", defaultSympto
   if (confirmation) {
     return (
       <BookingConfirmation
-        appointment={confirmation.appointment}
-        audioUrl={confirmation.audioUrl}
+        appointment={{
+          patientName: confirmation.patientName,
+          doctorName: confirmation.doctorName,
+          datetime: confirmation.appointmentTime,
+          status: "confirmed",
+          zoomLink: confirmation.zoomLink,
+        }}
+        message={confirmation.message}
       />
     );
   }
@@ -108,12 +118,13 @@ export default function BookAppointment({ defaultPatientName = "", defaultSympto
       </div>
 
       <div className="booking-form__field">
-        <label htmlFor="patientEmail">Email</label>
+        <label htmlFor="phone">Phone</label>
         <input
-          id="patientEmail"
-          type="email"
-          value={patientEmail}
-          onChange={(e) => setPatientEmail(e.target.value)}
+          id="phone"
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="705-555-0100"
           required
         />
       </div>
@@ -128,7 +139,7 @@ export default function BookAppointment({ defaultPatientName = "", defaultSympto
         >
           {doctors.map((doc) => (
             <option key={doc.id} value={doc.id}>
-              {doc.name} — {doc.specialty}
+              {doc.name} — {doc.specialty} ({doc.location})
             </option>
           ))}
         </select>
@@ -141,6 +152,16 @@ export default function BookAppointment({ defaultPatientName = "", defaultSympto
           type="datetime-local"
           value={datetime}
           onChange={(e) => setDatetime(e.target.value)}
+          required
+        />
+      </div>
+
+      <div className="booking-form__field">
+        <label htmlFor="reason">Reason for visit</label>
+        <input
+          id="reason"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
           required
         />
       </div>
