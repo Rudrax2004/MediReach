@@ -1,0 +1,15 @@
+[
+  {
+    "id": "d7a7543b-6ee2-4381-a337-6139f645e536",
+    "doctorId": "doc-001",
+    "doctorName": "Dr. Sarah Chen",
+    "specialty": "General Practice",
+    "patientName": "Jane Doe",
+    "patientEmail": "jane@example.com",
+    "datetime": "2026-06-28T10:00:00Z",
+    "symptoms": "fever and cough",
+    "notes": null,
+    "status": "confirmed",
+    "createdAt": "2026-06-27T15:08:05.385Z"
+  }
+]

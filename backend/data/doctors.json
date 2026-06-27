@@ -1,0 +1,62 @@
+[
+  {
+    "id": "doc-001",
+    "name": "Dr. Sarah Chen",
+    "specialty": "General Practice",
+    "rating": 4.9,
+    "available": true,
+    "nextSlot": "2026-06-28T09:00:00Z",
+    "languages": ["English", "Mandarin"],
+    "location": "Virtual"
+  },
+  {
+    "id": "doc-002",
+    "name": "Dr. James Okonkwo",
+    "specialty": "Cardiology",
+    "rating": 4.8,
+    "available": true,
+    "nextSlot": "2026-06-28T11:30:00Z",
+    "languages": ["English"],
+    "location": "Virtual"
+  },
+  {
+    "id": "doc-003",
+    "name": "Dr. Maria Rodriguez",
+    "specialty": "Dermatology",
+    "rating": 4.7,
+    "available": true,
+    "nextSlot": "2026-06-28T14:00:00Z",
+    "languages": ["English", "Spanish"],
+    "location": "Virtual"
+  },
+  {
+    "id": "doc-004",
+    "name": "Dr. David Kim",
+    "specialty": "Pulmonology",
+    "rating": 4.9,
+    "available": false,
+    "nextSlot": "2026-07-01T10:00:00Z",
+    "languages": ["English", "Korean"],
+    "location": "Virtual"
+  },
+  {
+    "id": "doc-005",
+    "name": "Dr. Emily Watson",
+    "specialty": "Emergency Medicine",
+    "rating": 4.8,
+    "available": true,
+    "nextSlot": "2026-06-28T08:00:00Z",
+    "languages": ["English"],
+    "location": "Virtual"
+  },
+  {
+    "id": "doc-006",
+    "name": "Dr. Ahmed Hassan",
+    "specialty": "Gastroenterology",
+    "rating": 4.6,
+    "available": true,
+    "nextSlot": "2026-06-29T13:00:00Z",
+    "languages": ["English", "Arabic"],
+    "location": "Virtual"
+  }
+]
