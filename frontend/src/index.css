@@ -76,18 +76,8 @@ body {
   cursor: not-allowed;
 }
 
-.app__results {
-  padding: 1rem;
-  background: white;
-  border-radius: 0.75rem;
-  border: 1px solid #e5e7eb;
-  font-size: 0.875rem;
-  overflow-x: auto;
-}
-
-.app__results pre {
-  margin: 0;
-  white-space: pre-wrap;
+.app__results-section {
+  margin-bottom: 1.5rem;
 }
 
 .app__error {

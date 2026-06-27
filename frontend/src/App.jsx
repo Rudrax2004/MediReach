@@ -1,6 +1,7 @@
 import { useState } from "react";
 import VoiceInput from "./components/VoiceInput";
 import BookAppointment from "./components/BookAppointment";
+import TriageResults from "./components/TriageResults";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
@@ -93,9 +94,9 @@ export default function App() {
 
       {error && <p className="app__error">{error}</p>}
 
-      {results && (
-        <div className="app__results">
-          <pre>{JSON.stringify(results, null, 2)}</pre>
+      {(loading || results) && (
+        <div className="app__results-section">
+          <TriageResults results={results} loading={loading} />
         </div>
       )}
 

@@ -34,6 +34,7 @@ export default function VoiceInput({
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const recognitionRef = useRef(null);
+  const liveCaptionRef = useRef(null);
   const countdownTimerRef = useRef(null);
   const delayTimerRef = useRef(null);
 
@@ -76,6 +77,48 @@ export default function VoiceInput({
     [age, sex, symptomIds, onAnalyze, clearTimers]
   );
 
+  const stopLiveCaptions = useCallback(() => {
+    if (liveCaptionRef.current) {
+      liveCaptionRef.current.stop();
+      liveCaptionRef.current = null;
+    }
+  }, []);
+
+  const startLiveCaptions = useCallback(() => {
+    const recognition = getSpeechRecognition();
+    if (!recognition) return;
+
+    liveCaptionRef.current = recognition;
+    recognition.lang = "en-CA";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    recognition.onresult = (event) => {
+      let interim = "";
+      let finalText = "";
+
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          finalText += result[0].transcript;
+        } else {
+          interim += result[0].transcript;
+        }
+      }
+
+      const live = (finalText + interim).trim();
+      if (live) {
+        setInterimText(live);
+      }
+    };
+
+    recognition.onerror = () => {
+      stopLiveCaptions();
+    };
+
+    recognition.start();
+  }, [stopLiveCaptions]);
+
   const handleTranscriptionComplete = useCallback(
     (transcript) => {
       if (!transcript?.trim()) {
@@ -85,10 +128,11 @@ export default function VoiceInput({
 
       onSymptomsChange(transcript.trim());
       setInterimText("");
+      stopLiveCaptions();
       setState(STATES.DONE);
       startAutoSubmitCountdown(transcript.trim());
     },
-    [onSymptomsChange, startAutoSubmitCountdown]
+    [onSymptomsChange, startAutoSubmitCountdown, stopLiveCaptions]
   );
 
   const startWebSpeechFallback = useCallback(() => {
@@ -172,11 +216,12 @@ export default function VoiceInput({
   );
 
   const stopRecording = useCallback(() => {
+    stopLiveCaptions();
     const recorder = mediaRecorderRef.current;
     if (recorder && recorder.state === "recording") {
       recorder.stop();
     }
-  }, []);
+  }, [stopLiveCaptions]);
 
   const startValenciaRecording = useCallback(async () => {
     clearTimers();
@@ -218,10 +263,11 @@ export default function VoiceInput({
 
       recorder.start();
       setState(STATES.RECORDING);
+      startLiveCaptions();
     } catch {
       startWebSpeechFallback();
     }
-  }, [clearTimers, startWebSpeechFallback, transcribeWithValencia]);
+  }, [clearTimers, startLiveCaptions, startWebSpeechFallback, transcribeWithValencia]);
 
   const handleButtonClick = () => {
     if (state === STATES.RECORDING || state === STATES.LISTENING_WEB) {
@@ -252,6 +298,7 @@ export default function VoiceInput({
   useEffect(() => {
     return () => {
       clearTimers();
+      stopLiveCaptions();
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
@@ -259,7 +306,7 @@ export default function VoiceInput({
         mediaRecorderRef.current.stop();
       }
     };
-  }, [clearTimers]);
+  }, [clearTimers, stopLiveCaptions]);
 
   const renderButtonContent = () => {
     switch (state) {
@@ -365,8 +412,15 @@ export default function VoiceInput({
           placeholder={placeholder}
           aria-label="Symptoms description"
         />
-        {(state === STATES.LISTENING_WEB || interimText) && (
-          <p className="voice-input__interim">{interimText || "Listening..."}</p>
+        {(state === STATES.RECORDING ||
+          state === STATES.LISTENING_WEB ||
+          state === STATES.PROCESSING ||
+          interimText) && (
+          <p className="voice-input__interim">
+            {state === STATES.PROCESSING
+              ? "Valencia transcribing..."
+              : interimText || "Listening..."}
+          </p>
         )}
       </div>
 
