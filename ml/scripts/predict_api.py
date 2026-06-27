@@ -38,6 +38,18 @@ def load_artifacts() -> None:
     )
 
 
+def parse_age(value):
+    if isinstance(value, bool):
+        return None
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    if numeric < 0 or not numeric.is_integer():
+        return None
+    return int(numeric)
+
+
 def build_feature_vector(symptoms: list, age: int, sex: str) -> np.ndarray:
     row = {col: 0 for col in FEATURE_COLUMNS}
 
@@ -81,10 +93,15 @@ def predict():
         return jsonify({"error": "symptoms must be an array of evidence IDs"}), 400
     if age is None:
         return jsonify({"error": "age is required"}), 400
+
+    age_int = parse_age(age)
+    if age_int is None:
+        return jsonify({"error": "age must be a valid non-negative integer"}), 400
+
     if sex is None:
         return jsonify({"error": "sex is required"}), 400
 
-    features = build_feature_vector(symptoms, age, sex)
+    features = build_feature_vector(symptoms, age_int, sex)
     probabilities = MODEL.predict_proba(features)[0]
     classes = MODEL.classes_
 
