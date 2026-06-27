@@ -20,10 +20,22 @@ GREEN: minor self-manageable symptoms
 YELLOW: needs medical attention, not immediately life-threatening
 RED: potentially life-threatening — chest pain, breathing difficulty, stroke signs, anaphylaxis`;
 
-const client = new OpenAI({
-  apiKey: process.env.NVIDIA_API_KEY,
-  baseURL: process.env.NVIDIA_BASE_URL,
-});
+let client = null;
+
+const getClient = () => {
+  if (!process.env.NVIDIA_API_KEY) {
+    throw new Error("NVIDIA_API_KEY is not configured");
+  }
+
+  if (!client) {
+    client = new OpenAI({
+      apiKey: process.env.NVIDIA_API_KEY,
+      baseURL: process.env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1",
+    });
+  }
+
+  return client;
+};
 
 const parseJsonResponse = (text) => {
   const trimmed = text.trim();
@@ -54,7 +66,7 @@ const nemotronTriage = async (symptoms_text, age, sex) => {
 
     logger.debug("Calling Nemotron triage", { model: MODEL });
 
-    const response = await client.chat.completions.create({
+    const response = await getClient().chat.completions.create({
       model: MODEL,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },

@@ -44,8 +44,22 @@ const parseJsonResponse = (text) => {
   return JSON.parse(fenced ? fenced[1].trim() : trimmed);
 };
 
+const isClaudeConfigured = () => Boolean(process.env.ANTHROPIC_API_KEY?.trim());
+
 const claudeTriage = async (symptoms_text, age, sex) => {
   const start = Date.now();
+
+  if (!isClaudeConfigured()) {
+    return {
+      severity: "yellow",
+      explanation: "Claude is not configured.",
+      emergency: false,
+      model: MODEL,
+      error: true,
+      skipped: true,
+      processing_time_ms: Date.now() - start,
+    };
+  }
 
   try {
     const anthropic = getClient();
@@ -110,4 +124,4 @@ const analyze = async (patientData) => {
   };
 };
 
-module.exports = { claudeTriage, analyze };
+module.exports = { claudeTriage, analyze, isClaudeConfigured };

@@ -65,7 +65,9 @@ const fallbackReport = () => ({
   when_to_escalate: "Seek immediate care if symptoms become severe.",
 });
 
-const buildConsensusLabel = (primarySource) => {
+const isClaudeConfigured = () => Boolean(process.env.ANTHROPIC_API_KEY?.trim());
+
+const buildConsensusLabel = (primarySource, claudeSkipped = false) => {
   if (primarySource === "nemotron") {
     return "✓ Assessment by NVIDIA Nemotron-4";
   }
@@ -73,6 +75,9 @@ const buildConsensusLabel = (primarySource) => {
     return "⚠ Nemotron unavailable — Claude assessment used";
   }
   if (primarySource === "ml") {
+    if (claudeSkipped) {
+      return "⚠ Nemotron unavailable — DDXPlus Random Forest model used";
+    }
     return "⚠ AI unavailable — DDXPlus Random Forest model used";
   }
   return "⚠ All models unavailable — please consult a doctor";
@@ -99,7 +104,13 @@ router.post("/", async (req, res, next) => {
     }
 
     const trimmed = symptoms_text.trim();
-    logger.info("Starting sequential triage", { symptoms_text: trimmed, chain: "nemotron→claude→ml" });
+    const claudeAvailable = isClaudeConfigured();
+    const chainLabel = claudeAvailable ? "nemotron→claude→ml" : "nemotron→ml";
+    logger.info("Starting sequential triage", {
+      symptoms_text: trimmed,
+      chain: chainLabel,
+      claude_configured: claudeAvailable,
+    });
 
     const startTime = Date.now();
     const fallbackChain = [];
@@ -121,7 +132,7 @@ router.post("/", async (req, res, next) => {
       primarySource = "nemotron";
       report = nemotronToReport(nemotron);
       logger.info("Triage completed via Nemotron");
-    } else {
+    } else if (claudeAvailable) {
       logger.warn("Nemotron failed, falling back to Claude");
 
       claude = await claudeTriage(trimmed, age, sex);
@@ -152,6 +163,28 @@ router.post("/", async (req, res, next) => {
           logger.error("All triage models failed");
         }
       }
+    } else {
+      logger.warn("Nemotron failed, skipping Claude (ANTHROPIC_API_KEY not set), using ML");
+
+      ml = await mlPredict(symptom_ids, age, sex);
+      fallbackChain.push({
+        model: "claude",
+        success: false,
+        skipped: true,
+        reason: "ANTHROPIC_API_KEY not configured",
+      });
+      fallbackChain.push({
+        model: "ml",
+        success: isMlSuccess(ml),
+      });
+
+      if (isMlSuccess(ml)) {
+        primarySource = "ml";
+        report = mlToReport(ml);
+        logger.info("Triage completed via Random Forest (fallback)");
+      } else {
+        logger.error("Nemotron and ML failed; Claude was not configured");
+      }
     }
 
     console.log(
@@ -171,8 +204,9 @@ router.post("/", async (req, res, next) => {
       report,
       consensus: {
         type: primarySource === "nemotron" ? "primary" : "fallback",
-        label: buildConsensusLabel(primarySource),
+        label: buildConsensusLabel(primarySource, !claudeAvailable),
         primary_source: primarySource,
+        claude_configured: claudeAvailable,
       },
       nemotron: nemotron
         ? {
