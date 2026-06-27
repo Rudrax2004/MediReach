@@ -72,9 +72,11 @@ router.post("/", async (req, res, next) => {
 
     const start = Date.now();
 
-    const [claude, nemotron, ml] = await Promise.all([
-      claudeController.analyze(patientData),
-      nemotronController.analyze(patientData),
+    const claude = await claudeController.analyze(patientData);
+    const claudeSeverity = claude.analysis?.severity;
+
+    const [nemotron, ml] = await Promise.all([
+      nemotronController.analyze(patientData, claudeSeverity),
       mlController.analyze(patientData),
     ]);
 
