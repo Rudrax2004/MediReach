@@ -1,5 +1,6 @@
 const fs = require("fs").promises;
 const path = require("path");
+const axios = require("axios");
 const { v4: uuidv4 } = require("uuid");
 const logger = require("../utils/logger");
 
@@ -14,6 +15,40 @@ const readJson = async (filePath) => {
 const writeJson = async (filePath, data) => {
   await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
 };
+
+const formatAppointmentTime = (datetime) => {
+  const date = new Date(datetime);
+  return date.toLocaleString("en-CA", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  });
+};
+
+async function sendVoiceConfirmation(patient_name, doctor_name, appointment_time) {
+  const script = `Hello ${patient_name}, this is MediReach confirming your teleconsult with ${doctor_name} on ${appointment_time}. Your video call link has been sent. If your condition worsens before your appointment, please call 911 immediately. Thank you for using MediReach.`;
+
+  try {
+    const baseUrl = (process.env.VALENCIA_API_URL || "").replace(/\/$/, "");
+    const response = await axios.post(
+      `${baseUrl}/text-to-speech`,
+      { text: script, voice: "en-CA-female", speed: 0.9, format: "mp3" },
+      {
+        headers: { Authorization: `Bearer ${process.env.VALENCIA_API_KEY}` },
+        timeout: 30000,
+      }
+    );
+
+    return { audio_url: response.data.audio_url, source: "valencia-tts" };
+  } catch (error) {
+    logger.warn("Valencia TTS unavailable", { error: error.message });
+    return { audio_url: null, source: "unavailable" };
+  }
+}
 
 const getDoctors = async (req, res, next) => {
   try {
@@ -82,7 +117,19 @@ const bookAppointment = async (req, res, next) => {
 
     logger.info("Appointment booked", { appointmentId: appointment.id, doctorId });
 
-    res.status(201).json({ message: "Appointment booked successfully", appointment });
+    const appointmentTime = formatAppointmentTime(datetime);
+    const voiceConfirmation = await sendVoiceConfirmation(
+      patientName,
+      doctor.name,
+      appointmentTime
+    );
+
+    res.status(201).json({
+      message: "Appointment booked successfully",
+      appointment,
+      audio_url: voiceConfirmation.audio_url,
+      voice_source: voiceConfirmation.source,
+    });
   } catch (error) {
     next(error);
   }
@@ -115,4 +162,4 @@ const getAppointments = async (req, res, next) => {
   }
 };
 
-module.exports = { getDoctors, bookAppointment, getAppointments };
+module.exports = { getDoctors, bookAppointment, getAppointments, sendVoiceConfirmation };

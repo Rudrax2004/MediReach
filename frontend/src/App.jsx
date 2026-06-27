@@ -1,5 +1,6 @@
 import { useState } from "react";
 import VoiceInput from "./components/VoiceInput";
+import BookAppointment from "./components/BookAppointment";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
@@ -97,6 +98,11 @@ export default function App() {
           <pre>{JSON.stringify(results, null, 2)}</pre>
         </div>
       )}
+
+      <section className="app__section">
+        <h2 className="app__section-title">Book a Teleconsult</h2>
+        <BookAppointment defaultSymptoms={symptomsText} />
+      </section>
     </div>
   );
 }
