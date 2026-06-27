@@ -43,11 +43,26 @@ export default function BookingConfirmation({ appointment, audioUrl, message }) 
         </div>
         {appointment.zoomLink && (
           <div>
-            <dt>Video call</dt>
+            <dt>Zoom video call</dt>
             <dd>
               <a href={appointment.zoomLink} target="_blank" rel="noreferrer">
-                {appointment.zoomLink}
+                Join scheduled meeting
               </a>
+              {appointment.zoomMeetingId && (
+                <span className="booking-confirmation__specialty">
+                  Meeting ID: {appointment.zoomMeetingId}
+                </span>
+              )}
+              {appointment.zoomPassword && (
+                <span className="booking-confirmation__specialty">
+                  Passcode: {appointment.zoomPassword}
+                </span>
+              )}
+              {appointment.zoomDurationMinutes && (
+                <span className="booking-confirmation__specialty">
+                  60-minute session — starts at your scheduled time only
+                </span>
+              )}
             </dd>
           </div>
         )}

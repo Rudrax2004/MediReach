@@ -3,6 +3,7 @@ const fs = require("fs").promises;
 const path = require("path");
 const { v4: uuidv4 } = require("uuid");
 const logger = require("../utils/logger");
+const { createScheduledMeeting } = require("../utils/zoomClient");
 
 const router = express.Router();
 
@@ -145,11 +146,6 @@ const findDoctorById = async (doctorId) => {
   );
 };
 
-const generateZoomLink = () => {
-  const digits = Math.floor(100000000 + Math.random() * 900000000);
-  return `https://zoom.us/j/medireach-${digits}`;
-};
-
 router.get("/doctors", async (req, res, next) => {
   try {
     const { specialty, location, accepting } = req.query;
@@ -218,7 +214,25 @@ router.post("/book-appointment", async (req, res, next) => {
     }
 
     const confirmation_id = uuidv4();
-    const zoom_link = generateZoomLink();
+    const meetingTopic = `MediReach Teleconsult — ${doctor.name} & ${patient_name}`;
+
+    let zoomMeeting;
+    try {
+      zoomMeeting = await createScheduledMeeting({
+        topic: meetingTopic,
+        startTime: datetime,
+        durationMinutes: 60,
+      });
+    } catch (error) {
+      logger.error("Zoom meeting creation failed", { error: error.message });
+      return res.status(502).json({
+        error: "Failed to schedule Zoom meeting",
+        details:
+          process.env.NODE_ENV === "development"
+            ? error.message
+            : "Please verify Zoom API credentials and try again.",
+      });
+    }
 
     const appointment = {
       confirmation_id,
@@ -228,7 +242,12 @@ router.post("/book-appointment", async (req, res, next) => {
       phone,
       datetime,
       reason,
-      zoom_link,
+      zoom_link: zoomMeeting.join_url,
+      zoom_meeting_id: zoomMeeting.meeting_id,
+      zoom_password: zoomMeeting.password,
+      zoom_start_time: zoomMeeting.start_time,
+      zoom_duration_minutes: zoomMeeting.duration,
+      zoom_timezone: zoomMeeting.timezone,
       specialty: doctor.specialty,
       location: doctor.location,
       status: "confirmed",
@@ -239,13 +258,22 @@ router.post("/book-appointment", async (req, res, next) => {
     appointments.push(appointment);
     await writeJson(APPOINTMENTS_PATH, appointments);
 
-    logger.info("Appointment booked", { confirmation_id, doctor_id });
+    logger.info("Appointment booked with Zoom meeting", {
+      confirmation_id,
+      doctor_id,
+      zoom_meeting_id: zoomMeeting.meeting_id,
+    });
 
     res.status(201).json({
       confirmation_id,
       doctor_name: doctor.name,
       appointment_time: datetime,
-      zoom_link,
+      zoom_link: zoomMeeting.join_url,
+      zoom_meeting_id: zoomMeeting.meeting_id,
+      zoom_password: zoomMeeting.password,
+      zoom_start_time: zoomMeeting.start_time,
+      zoom_duration_minutes: 60,
+      zoom_timezone: zoomMeeting.timezone,
       message: "Appointment confirmed! Check your phone for voice confirmation.",
     });
   } catch (error) {

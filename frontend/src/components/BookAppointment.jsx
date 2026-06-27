@@ -78,6 +78,10 @@ export default function BookAppointment({ defaultPatientName = "", defaultSympto
         doctorName: data.doctor_name,
         appointmentTime: data.appointment_time,
         zoomLink: data.zoom_link,
+        zoomMeetingId: data.zoom_meeting_id,
+        zoomPassword: data.zoom_password,
+        zoomStartTime: data.zoom_start_time,
+        zoomDurationMinutes: data.zoom_duration_minutes,
         message: data.message,
         patientName,
       });
@@ -97,6 +101,9 @@ export default function BookAppointment({ defaultPatientName = "", defaultSympto
           datetime: confirmation.appointmentTime,
           status: "confirmed",
           zoomLink: confirmation.zoomLink,
+          zoomMeetingId: confirmation.zoomMeetingId,
+          zoomPassword: confirmation.zoomPassword,
+          zoomDurationMinutes: confirmation.zoomDurationMinutes,
         }}
         message={confirmation.message}
       />
