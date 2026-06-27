@@ -17,7 +17,7 @@ app.use(express.json());
 app.get("/health", (_req, res) => {
   res.json({
     status: "ok",
-    models: ["claude", "nemotron", "random-forest"],
+    models: ["nemotron", "claude", "random-forest"],
     version: "1.0.0",
   });
 });

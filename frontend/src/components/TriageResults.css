@@ -132,6 +132,20 @@
   color: white;
 }
 
+.triage-results__source {
+  margin: 0 0 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #0f766e;
+}
+
+.triage-results__chain {
+  margin: 0 0 0.75rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-style: italic;
+}
+
 .triage-results__timing {
   font-size: 0.75rem;
   color: #6b7280;

@@ -4,18 +4,18 @@ const logger = require("../utils/logger");
 const MODEL = "nvidia/nemotron-4-340b-instruct";
 const MODEL_LABEL = "nemotron-4-340b";
 
-const SYSTEM_PROMPT = `You are MediReach's validation AI — a medical triage assistant providing a second opinion alongside Claude. Your role is to independently assess symptom urgency for patients in remote communities.
+const SYSTEM_PROMPT = `You are MediReach's primary clinical triage engine powered by NVIDIA Nemotron-4. Your role is to assess symptom urgency and predict the most likely condition category for patients in remote communities.
 
 Return ONLY raw JSON, no markdown:
 {
   'severity': 'green' | 'yellow' | 'red',
-  'explanation': '1-2 sentences: your independent assessment of the situation.',
+  'explanation': '2-3 warm, plain-language sentences explaining the assessment and likely situation.',
   'estimated_condition': 'Plain-language phrase for the most likely condition category.',
   'confidence': 'high' | 'medium' | 'low',
   'agree_note': 'One sentence about what you are most certain about.'
 }
 
-Severity rules — same as Claude:
+Severity rules:
 GREEN: minor self-manageable symptoms
 YELLOW: needs medical attention, not immediately life-threatening
 RED: potentially life-threatening — chest pain, breathing difficulty, stroke signs, anaphylaxis`;
@@ -31,35 +31,18 @@ const parseJsonResponse = (text) => {
   return JSON.parse(fenced ? fenced[1].trim() : trimmed);
 };
 
-const computeConsensus = (nemotronSeverity, claudeSeverity) => {
-  if (!claudeSeverity) {
-    return { consensus: "unavailable" };
-  }
-
-  if (nemotronSeverity === claudeSeverity) {
-    return { consensus: "agree", confidence_boost: true };
-  }
-
-  return { consensus: "differ", use_claude: true };
-};
-
-const logDemoVerdicts = (claudeSeverity, nemotronSeverity, consensusResult) => {
-  const claudeLabel = (claudeSeverity || "n/a").toUpperCase();
-  const nemotronLabel = (nemotronSeverity || "n/a").toUpperCase();
-  const consensusLabel = consensusResult.consensus.toUpperCase();
-
+const logDemoVerdicts = (severity, source) => {
   console.log(
     `\n╔══════════════════════════════════════════════════════╗` +
-      `\n║  MediReach Demo — AI Triage Verdicts                 ║` +
+      `\n║  MediReach — Nemotron Primary Triage                 ║` +
       `\n╠══════════════════════════════════════════════════════╣` +
-      `\n║  Claude:    ${claudeLabel.padEnd(40)}║` +
-      `\n║  Nemotron:  ${nemotronLabel.padEnd(40)}║` +
-      `\n║  Consensus: ${consensusLabel.padEnd(40)}║` +
+      `\n║  Source:    ${(source || "nemotron").toUpperCase().padEnd(40)}║` +
+      `\n║  Severity:  ${(severity || "n/a").toUpperCase().padEnd(40)}║` +
       `\n╚══════════════════════════════════════════════════════╝\n`
   );
 };
 
-const nemotronTriage = async (symptoms_text, age, sex, claude_severity) => {
+const nemotronTriage = async (symptoms_text, age, sex) => {
   const start = Date.now();
 
   try {
@@ -88,25 +71,19 @@ const nemotronTriage = async (symptoms_text, age, sex, claude_severity) => {
     }
 
     const parsed = parseJsonResponse(content);
-    const consensusResult = computeConsensus(parsed.severity, claude_severity);
-
-    logDemoVerdicts(claude_severity, parsed.severity, consensusResult);
+    logDemoVerdicts(parsed.severity, "nemotron");
 
     return {
       ...parsed,
       model: MODEL_LABEL,
-      ...consensusResult,
       processing_time_ms: Date.now() - start,
     };
   } catch (error) {
     logger.error("Nemotron triage failed", { error: error.message });
 
-    logDemoVerdicts(claude_severity, "unavailable", { consensus: "unavailable" });
-
     return {
       severity: "yellow",
       estimated_condition: "Unable to assess",
-      consensus: "unavailable",
       model: MODEL_LABEL,
       error: true,
       processing_time_ms: Date.now() - start,
@@ -114,12 +91,11 @@ const nemotronTriage = async (symptoms_text, age, sex, claude_severity) => {
   }
 };
 
-const analyze = async (patientData, claudeSeverity) => {
+const analyze = async (patientData) => {
   const result = await nemotronTriage(
     patientData.symptoms,
     patientData.age ?? "unknown",
-    patientData.sex ?? patientData.gender ?? "unknown",
-    claudeSeverity
+    patientData.sex ?? patientData.gender ?? "unknown"
   );
 
   if (result.error) {
